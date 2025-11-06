@@ -186,7 +186,7 @@ def train(hidden_dims, lr, batch_size, epochs, seed, data_dir):
     test_accuracy = evaluate_model(best_model, cifar10_loader['test'])
     # TODO: Add any information you might want to save for plotting
     logging_dict = {
-        'train_losses': train_losses,
+        'train_losses': train_losses
     }
     #######################
     # END OF YOUR CODE    #
@@ -231,7 +231,7 @@ if __name__ == '__main__':
     plt.legend()
     plt.title('Training Loss and Validation Accuracy over Epochs')
     plt.grid(True)
-    plt.savefig('training_plot.png')
+    plt.savefig('training_plot_numpy.png')
 
     print(f'Test accuracy of best model: {test_accuracy*100:.2f}%')
     

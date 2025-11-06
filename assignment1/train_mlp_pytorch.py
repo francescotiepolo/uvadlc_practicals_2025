@@ -54,7 +54,9 @@ def accuracy(predictions, targets):
     #######################
     # PUT YOUR CODE HERE  #
     #######################
-
+    with torch.no_grad():
+      preds = torch.argmax(predictions, dim=1)
+      accuracy = (preds == targets).float().mean().item()
     #######################
     # END OF YOUR CODE    #
     #######################
@@ -82,7 +84,20 @@ def evaluate_model(model, data_loader):
     #######################
     # PUT YOUR CODE HERE  #
     #######################
+    model.eval()
+    device = next(model.parameters()).device
+    tot_correct = 0
+    tot_samples = 0
 
+    with torch.no_grad():
+        for inputs, targets in data_loader:
+            inputs, targets = inputs.to(device), targets.to(device)
+            inputs = inputs.view(inputs.size(0), -1)
+            predictions = torch.argmax(model(inputs), dim=1)
+            tot_correct += (predictions == targets).sum().item()
+            tot_samples += targets.size(0)
+
+    avg_accuracy = tot_correct / tot_samples
     #######################
     # END OF YOUR CODE    #
     #######################
@@ -143,17 +158,50 @@ def train(hidden_dims, lr, use_batch_norm, batch_size, epochs, seed, data_dir):
     #######################
     # PUT YOUR CODE HERE  #
     #######################
-
+    x_sample, _ = next(iter(cifar10_loader['train']))
+    n_inputs = np.prod(x_sample.shape[1:])
     # TODO: Initialize model and loss module
-    model = ...
-    loss_module = ...
+    model = MLP(n_inputs=n_inputs, n_hidden=hidden_dims, n_classes=10,
+                use_batch_norm=use_batch_norm).to(device)
+    loss_module = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(model.parameters(), lr=lr)
     # TODO: Training loop including validation
+    val_accuracies = []
+    train_losses = []
+    best_val_accuracy = 0.0
+    best_model = None
+
+    for epoch in range(epochs):
+        model.train()
+        tot_loss = 0.0
+        num_batches = 0
+        for x_batch, y_batch in cifar10_loader['train']:
+            x_batch, y_batch = x_batch.to(device), y_batch.to(device)
+            x_batch = x_batch.view(x_batch.size(0), -1)
     # TODO: Do optimization with the simple SGD optimizer
-    val_accuracies = ...
+            optimizer.zero_grad()
+            out = model(x_batch)
+
+            loss = loss_module(out, y_batch)
+            loss.backward()
+            optimizer.step()
+
+            tot_loss += loss.item()
+            num_batches += 1
+
+        avg_loss = tot_loss / num_batches
+        train_losses.append(avg_loss)
+        val_acc = evaluate_model(model, cifar10_loader['validation'])
+        val_accuracies.append(val_acc)
+        if val_acc > best_val_accuracy:
+            best_val_accuracy = val_acc
+            best_model = deepcopy(model)
     # TODO: Test best model
-    test_accuracy = ...
+    test_accuracy = evaluate_model(best_model, cifar10_loader['test'])
     # TODO: Add any information you might want to save for plotting
-    logging_dict = ...
+    logging_dict = {
+        'train_losses': train_losses
+    }
     #######################
     # END OF YOUR CODE    #
     #######################
@@ -188,6 +236,17 @@ if __name__ == '__main__':
     args = parser.parse_args()
     kwargs = vars(args)
 
-    train(**kwargs)
+    model, val_accuracies, test_accuracy, logging_dict = train(**kwargs)
     # Feel free to add any additional functions, such as plotting of the loss curve here
-    
+    import matplotlib.pyplot as plt
+
+    losses = logging_dict['train_losses']
+    plt.plot(losses, label='Training Losses')
+    plt.plot(val_accuracies, label='Validation Accuracies')
+    plt.xlabel('Epochs')
+    plt.legend()
+    plt.title('Training Loss and Validation Accuracy over Epochs')
+    plt.grid(True)
+    plt.savefig('training_plot_pytorch.png')
+
+    print(f'Test accuracy of best model: {test_accuracy*100:.2f}%')

@@ -59,7 +59,29 @@ class MLP(nn.Module):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-        pass
+        super().__init__()
+        
+        layers = OrderedDict()
+        
+        for i, h in enumerate(n_hidden):
+            if i == 0:
+                layers[f'linear_{i}'] = nn.Linear(n_inputs, h)
+            else:
+                layers[f'linear_{i}'] = nn.Linear(n_hidden[i-1], h)
+            
+            nn.init.kaiming_normal_(layers[f'linear_{i}'].weight, nonlinearity='relu')
+            nn.init.zeros_(layers[f'linear_{i}'].bias)
+            
+            if use_batch_norm:
+                layers[f'batchnorm_{i}'] = nn.BatchNorm1d(h)
+            
+            layers[f'elu_{i}'] = nn.ELU(alpha=1.0)
+
+        final_layer = nn.Linear(n_hidden[-1], n_classes, bias=True)
+        layers['final_linear'] = final_layer
+
+        self.net = nn.Sequential(layers)
+
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -81,7 +103,8 @@ class MLP(nn.Module):
         #######################
         # PUT YOUR CODE HERE  #
         #######################
-
+        x = x.view(x.size(0), -1)
+        out = self.net(x)
         #######################
         # END OF YOUR CODE    #
         #######################
@@ -94,4 +117,3 @@ class MLP(nn.Module):
         Returns the device on which the model is. Can be useful in some situations.
         """
         return next(self.parameters()).device
-    
