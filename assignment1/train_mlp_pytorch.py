@@ -250,3 +250,18 @@ if __name__ == '__main__':
     plt.savefig('training_plot_pytorch.png')
 
     print(f'Test accuracy of best model: {test_accuracy*100:.2f}%')
+
+    # Now unisng batch norm
+    kwargs['use_batch_norm'] = True
+    model_bn, val_accuracies_bn, test_accuracy_bn, logging_dict_bn = train(**kwargs)
+
+    losses = logging_dict_bn['train_losses']
+    plt.plot(losses, label='Training Losses (BN)')
+    plt.plot(val_accuracies_bn, label='Validation Accuracies (BN)')
+    plt.xlabel('Epochs')
+    plt.legend()
+    plt.title('Training Loss and Validation Accuracy over Epochs (with Batch Norm)')
+    plt.grid(True)
+    plt.savefig('training_plot_pytorch_bn.png')
+
+    print(f'Test accuracy of best model: {test_accuracy_bn*100:.2f}%')
